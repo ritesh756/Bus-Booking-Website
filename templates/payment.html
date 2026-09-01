@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Payment - {{ booking.booking_id }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 30px; padding-bottom: 60px;">
+    <div class="payment-container">
+        <div class="payment-card">
+            <div class="payment-header">
+                <i class="fas fa-mobile-alt"></i>
+                <h2>UPI Payment</h2>
+                <p>Scan the QR code below to complete your payment</p>
+            </div>
+
+            <div class="payment-amount">
+                <span class="amount-label">Amount to Pay</span>
+                <span class="amount-value">₹{{ booking.total_amount|int }}</span>
+            </div>
+
+            <div class="qr-container">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="UPI QR Code" class="qr-image" id="qrImage">
+                <div class="qr-merchant">
+                    <strong>{{ merchant_name if merchant_name else 'Ritesh Tours & Travels' }}</strong>
+                    <span>{{ upi_id }}</span>
+                </div>
+            </div>
+
+            <div class="payment-steps">
+                <h3>How to Pay:</h3>
+                <ol>
+                    <li>Open any UPI app (Google Pay, PhonePe, Paytm, BHIM)</li>
+                    <li>Tap on <strong>Scan & Pay</strong> or <strong>QR Scanner</strong></li>
+                    <li>Scan the QR code above</li>
+                    <li>Verify the amount <strong>₹{{ booking.total_amount|int }}</strong> and merchant name</li>
+                    <li>Complete the payment</li>
+                </ol>
+            </div>
+
+            <div class="payment-details">
+                <div class="detail-row">
+                    <span>Booking ID</span>
+                    <strong>{{ booking.booking_id }}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Route</span>
+                    <span>{{ booking.schedule.route.origin }} → {{ booking.schedule.route.destination }}</span>
+                </div>
+                <div class="detail-row">
+                    <span>Date</span>
+                    <span>{{ booking.schedule.travel_date.strftime('%d %b %Y') }}</span>
+                </div>
+                <div class="detail-row">
+                    <span>Seats</span>
+                    <span>{{ booking.seat_numbers }}</span>
+                </div>
+            </div>
+
+            <div class="payment-actions">
+                <button class="btn btn-success btn-block" id="confirmPaymentBtn" onclick="confirmPayment()">
+                    <i class="fas fa-check-circle"></i> I've Completed Payment
+                </button>
+                <a href="{{ url_for('booking_confirmation', booking_id=booking.booking_id) }}" class="btn btn-outline btn-block">
+                    <i class="fas fa-clock"></i> Pay Later (Cash on Board)
+                </a>
+            </div>
+
+            <div class="payment-note">
+                <i class="fas fa-info-circle"></i>
+                Your booking is confirmed. You can pay now via UPI or pay cash to the driver during boarding.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function confirmPayment() {
+    const btn = document.getElementById('confirmPaymentBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirming...';
+    
+    try {
+        const response = await fetch('/api/payment-confirm/{{ booking.booking_id }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            btn.innerHTML = '<i class="fas fa-check"></i> Payment Confirmed!';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("booking_confirmation", booking_id=booking.booking_id) }}';
+            }, 1500);
+        }
+    } catch (err) {
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> I\'ve Completed Payment';
+        btn.disabled = false;
+        alert('Could not confirm. Your booking is still active — you can pay later.');
+    }
+}
+</script>
+{% endblock %}

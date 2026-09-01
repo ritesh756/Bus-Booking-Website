@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Booking Confirmed - {{ booking.booking_id }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 30px; padding-bottom: 60px;">
+    <div class="confirmation-card">
+        <div class="confirmation-icon {% if booking.payment_status == 'paid' %}paid{% elif booking.payment_status == 'pending' %}pending{% endif %}">
+            {% if booking.payment_status == 'paid' %}
+                <i class="fas fa-check"></i>
+            {% elif booking.payment_status == 'pending' %}
+                <i class="fas fa-clock"></i>
+            {% else %}
+                <i class="fas fa-check"></i>
+            {% endif %}
+        </div>
+        <h2>{% if booking.payment_status == 'paid' %}Booking & Payment Confirmed!{% elif booking.payment_status == 'pending' %}Booking Confirmed - Payment Pending{% else %}Booking Confirmed!{% endif %}</h2>
+        <p style="color: var(--text-muted);">Your bus ticket has been booked successfully</p>
+        
+        <div class="booking-id">{{ booking.booking_id }}</div>
+
+        <!-- Payment Status Badge -->
+        <div class="payment-status-badge {{ booking.payment_status }}">
+            {% if booking.payment_status == 'paid' %}
+                <i class="fas fa-check-circle"></i> Payment Received
+            {% elif booking.payment_status == 'pending' %}
+                <i class="fas fa-exclamation-circle"></i> Payment Pending
+            {% else %}
+                <i class="fas fa-clock"></i> Payment {{ booking.payment_status|title }}
+            {% endif %}
+            <span class="payment-method-badge">{{ booking.payment_method|upper }}</span>
+        </div>
+
+        <!-- QR Code for pending UPI payments -->
+        {% if qr_code %}
+        <div class="confirmation-qr">
+            <p><strong>Scan to Pay ₹{{ booking.total_amount|int }}</strong></p>
+            <img src="data:image/png;base64,{{ qr_code }}" alt="UPI QR Code" style="width: 200px; border-radius: 10px; border: 2px solid var(--border);">
+            <div style="margin-top: 10px;">
+                <a href="{{ url_for('payment_page', booking_id=booking.booking_id) }}" class="btn btn-success btn-sm">
+                    <i class="fas fa-mobile-alt"></i> Pay Now via UPI
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="ticket-details">
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-bus" style="color: var(--primary);"></i> Bus</span>
+                <span class="detail-value">{{ booking.schedule.bus.bus_name }} ({{ booking.schedule.bus.bus_type }})</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-route" style="color: var(--primary);"></i> Route</span>
+                <span class="detail-value">{{ booking.schedule.route.origin }} → {{ booking.schedule.route.destination }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-calendar" style="color: var(--primary);"></i> Date</span>
+                <span class="detail-value">{{ booking.schedule.travel_date.strftime('%A, %d %B %Y') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-clock" style="color: var(--primary);"></i> Departure</span>
+                <span class="detail-value">{{ booking.schedule.departure_time.strftime('%H:%M') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-clock" style="color: var(--primary);"></i> Arrival</span>
+                <span class="detail-value">{{ booking.schedule.arrival_time.strftime('%H:%M') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-chair" style="color: var(--primary);"></i> Seats</span>
+                <span class="detail-value">{{ booking.seat_numbers }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-user" style="color: var(--primary);"></i> Passenger</span>
+                <span class="detail-value">{{ booking.passenger_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-phone" style="color: var(--primary);"></i> Phone</span>
+                <span class="detail-value">{{ booking.passenger_phone }}</span>
+            </div>
+            {% if booking.boarding_point %}
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-map-marker-alt" style="color: var(--primary);"></i> Boarding</span>
+                <span class="detail-value">{{ booking.boarding_point }}</span>
+            </div>
+            {% endif %}
+            {% if booking.dropping_point %}
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-map-pin" style="color: var(--primary);"></i> Dropping</span>
+                <span class="detail-value">{{ booking.dropping_point }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-rupee-sign" style="color: var(--primary);"></i> Total Amount</span>
+                <span class="detail-value" style="color: var(--success); font-size: 1.2rem;">₹{{ booking.total_amount|int }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-credit-card" style="color: var(--primary);"></i> Payment</span>
+                <span class="detail-value">
+                    {{ booking.payment_method|title }}
+                    {% if booking.payment_status == 'paid' %}
+                        <span style="color: var(--success);">✓ Paid</span>
+                    {% else %}
+                        <span style="color: var(--warning);">⏳ Pending</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="confirmation-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i> Book Another
+            </a>
+            <a href="{{ url_for('my_bookings') }}" class="btn btn-outline">
+                <i class="fas fa-ticket-alt"></i> View My Bookings
+            </a>
+            <button onclick="window.print()" class="btn btn-outline">
+                <i class="fas fa-print"></i> Print Ticket
+            </button>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background: #fff3cd; border-radius: 8px; text-align: left; font-size: 0.85rem; color: #856404;">
+            <strong><i class="fas fa-info-circle"></i> Important Instructions:</strong>
+            <ul style="margin-top: 8px; padding-left: 20px;">
+                <li>Please arrive at the boarding point 15 minutes before departure.</li>
+                <li>Carry a valid photo ID for verification.</li>
+                <li>Cancellation is allowed up to 2 hours before departure.</li>
+                <li>Booking ID: <strong>{{ booking.booking_id }}</strong> - Keep this for reference.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

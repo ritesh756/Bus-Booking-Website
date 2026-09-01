@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Select Seats - Ritesh Tours and Travels{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 30px;">
+    <!-- Bus Info Header -->
+    <div class="results-header">
+        <div>
+            <h2>{{ schedule.bus.bus_name }}</h2>
+            <div class="route-info">
+                {{ schedule.route.origin }} <i class="fas fa-arrow-right" style="margin: 0 5px; font-size: 0.8rem;"></i> {{ schedule.route.destination }}
+                &nbsp;|&nbsp; {{ schedule.travel_date.strftime('%d %b %Y') }}
+                &nbsp;|&nbsp; {{ schedule.departure_time.strftime('%H:%M') }} - {{ schedule.arrival_time.strftime('%H:%M') }}
+            </div>
+        </div>
+        <a href="{{ url_for('search', origin=schedule.route.origin, destination=schedule.route.destination, travel_date=schedule.travel_date.isoformat()) }}" class="btn btn-outline btn-sm">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <div class="seat-selection-grid">
+        <!-- Seat Layout -->
+        <div class="seat-layout-card">
+            <h3><i class="fas fa-chair"></i> Select Your Seats</h3>
+            
+            <div class="seat-grid" id="seatGrid">
+                {% set seats_per_row = 4 %}
+                {% for seat in seats %}
+                    {% if loop.index0 % seats_per_row == 0 and loop.index0 > 0 %}
+                        {% if (loop.index0 // seats_per_row) % 4 == 0 %}
+                            <div class="seat-aisle"></div>
+                        {% endif %}
+                    {% endif %}
+                    <div class="seat {% if seat.is_booked %}booked{% endif %}" 
+                         data-seat="{{ seat.seat_number }}" 
+                         data-type="{{ seat.seat_type }}"
+                         {% if not seat.is_booked %}onclick="toggleSeat('{{ seat.seat_number }}', this)"{% endif %}
+                         title="Seat {{ seat.seat_number }} - {{ seat.seat_type|title }} {% if seat.is_booked %}(Booked){% else %}(Available){% endif %}">
+                        {{ seat.seat_number }}
+                        {% if seat.is_booked %}
+                            <span class="seat-booked-icon"><i class="fas fa-user"></i></span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="seat-legend">
+                <div class="seat-legend-item">
+                    <div class="legend-box legend-available"></div>
+                    Available
+                </div>
+                <div class="seat-legend-item">
+                    <div class="legend-box legend-selected"></div>
+                    Selected
+                </div>
+                <div class="seat-legend-item">
+                    <div class="legend-box legend-booked"></div>
+                    Booked
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Form -->
+        <div class="booking-form-card">
+            <h3><i class="fas fa-ticket-alt"></i> Booking Details</h3>
+            
+            <form action="{{ url_for('confirm_booking') }}" method="POST" id="bookingForm">
+                <input type="hidden" name="schedule_id" value="{{ schedule.id }}">
+                <input type="hidden" name="selected_seats" id="selectedSeatsInput" value="">
+
+                <div class="form-group">
+                    <label>Selected Seats</label>
+                    <div class="selected-seats-display" id="selectedSeatsDisplay">
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Click on seats to select</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Passenger Name *</label>
+                    <input type="text" name="passenger_name" required placeholder="Enter full name"
+                           value="{{ current_user.name if current_user else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="passenger_email" required placeholder="email@example.com"
+                           value="{{ current_user.email if current_user else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Phone *</label>
+                    <input type="tel" name="passenger_phone" required placeholder="+91 XXXXX XXXXX" pattern="[0-9+\s\-]{10,15}"
+                           value="{{ current_user.phone if current_user else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select name="passenger_gender">
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Boarding Point</label>
+                    <select name="boarding_point">
+                        {% for bp in boarding_points %}
+                        <option value="{{ bp.name }}">{{ bp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Dropping Point</label>
+                    <select name="dropping_point">
+                        <option value="Pune Swargate Bus Stand">Pune Swargate Bus Stand</option>
+                        <option value="Pune - Pune Satara Road">Pune - Satara Road</option>
+                        <option value="Kothrud Bus Stop">Kothrud Bus Stop</option>
+                        <option value="Pune - Hinjewadi Phase 3">Hinjewadi Phase 3</option>
+                    </select>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="form-group">
+                    <label><i class="fas fa-credit-card"></i> Payment Method</label>
+                    <div class="payment-method-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment_method" value="upi" checked>
+                            <div class="payment-option-content">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span>UPI / QR Code</span>
+                                <small>Pay via any UPI app</small>
+                            </div>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment_method" value="cash">
+                            <div class="payment-option-content">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <span>Cash on Board</span>
+                                <small>Pay to the driver</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="booking-summary">
+                    <div class="summary-row">
+                        <span>Price per seat</span>
+                        <span>₹{{ schedule.price|int }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Seats selected</span>
+                        <span id="seatCount">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Convenience fee</span>
+                        <span>₹0</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total Amount</span>
+                        <span id="totalAmount">₹0</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-block" id="bookBtn" disabled>
+                    <i class="fas fa-check-circle"></i> Proceed to Book
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const pricePerSeat = {{ schedule.price|int }};
+    let selectedSeats = [];
+
+    function toggleSeat(seatNum, element) {
+        if (element.classList.contains('selected')) {
+            element.classList.remove('selected');
+            selectedSeats = selectedSeats.filter(s => s !== seatNum);
+        } else {
+            element.classList.add('selected');
+            selectedSeats.push(seatNum);
+        }
+        updateBookingSummary();
+    }
+
+    function updateBookingSummary() {
+        selectedSeats.sort((a, b) => parseInt(a) - parseInt(b));
+        
+        const display = document.getElementById('selectedSeatsDisplay');
+        if (selectedSeats.length === 0) {
+            display.innerHTML = '<span style="color: var(--text-muted); font-size: 0.9rem;">Click on seats to select</span>';
+        } else {
+            display.innerHTML = selectedSeats.map(s => `<span class="selected-seat-tag">Seat ${s}</span>`).join('');
+        }
+
+        document.getElementById('selectedSeatsInput').value = selectedSeats.join(',');
+        document.getElementById('seatCount').textContent = selectedSeats.length;
+        document.getElementById('totalAmount').textContent = '₹' + (pricePerSeat * selectedSeats.length);
+        document.getElementById('bookBtn').disabled = selectedSeats.length === 0;
+    }
+</script>
+{% endblock %}

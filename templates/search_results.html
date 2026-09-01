@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Search Results - Ritesh Tours and Travels{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 30px;">
+    <!-- Results Header -->
+    <div class="results-header">
+        <div>
+            <h2><span class="city">{{ origin }}</span> <i class="fas fa-arrow-right" style="color: var(--primary); margin: 0 8px; font-size: 0.9rem;"></i> <span class="city">{{ destination }}</span></h2>
+            <div class="route-info">
+                {{ travel_date.strftime('%A, %d %B %Y') }} &nbsp;|&nbsp;
+                {% if route %}
+                    {{ route.distance_km }} km &nbsp;|&nbsp; ~{{ route.duration_hours }} hours
+                {% endif %}
+            </div>
+        </div>
+        <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">
+            <i class="fas fa-arrow-left"></i> Modify Search
+        </a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+        <form action="{{ url_for('search') }}" method="GET" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+            <input type="hidden" name="origin" value="{{ origin }}">
+            <input type="hidden" name="destination" value="{{ destination }}">
+            <input type="hidden" name="travel_date" value="{{ travel_date.isoformat() }}">
+            <select name="bus_type" class="btn btn-outline btn-sm" style="padding: 8px 15px; border-radius: 20px; font-family: 'Poppins';">
+                <option value="">All Types</option>
+                <option value="AC Seater" {{ 'selected' if bus_type == 'AC Seater' }}>AC Seater</option>
+                <option value="Non-AC Seater" {{ 'selected' if bus_type == 'Non-AC Seater' }}>Non-AC Seater</option>
+                <option value="AC Sleeper" {{ 'selected' if bus_type == 'AC Sleeper' }}>AC Sleeper</option>
+                <option value="Semi-Sleeper" {{ 'selected' if bus_type == 'Semi-Sleeper' }}>Semi-Sleeper</option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" style="border-radius: 20px;">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Bus Listings -->
+    {% if schedules %}
+        {% for schedule in schedules %}
+        <div class="bus-card">
+            <div class="bus-info">
+                <h3>{{ schedule.bus.bus_name }}</h3>
+                <div class="operator">{{ schedule.bus.operator }}</div>
+                <span class="bus-type-badge 
+                    {% if 'AC' in schedule.bus.bus_type and 'Sleeper' not in schedule.bus.bus_type %}badge-ac
+                    {% elif 'Non-AC' in schedule.bus.bus_type %}badge-nonac
+                    {% elif 'Sleeper' in schedule.bus.bus_type and 'Semi' not in schedule.bus.bus_type %}badge-sleeper
+                    {% else %}badge-semi{% endif %}">
+                    {{ schedule.bus.bus_type }}
+                </span>
+                <div class="amenities">
+                    {% for amenity in schedule.bus.amenities.split(',')[:4] %}
+                    <span>{{ amenity.strip() }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bus-time">
+                <div class="departure">{{ schedule.departure_time.strftime('%H:%M') }}</div>
+                <div class="dot-line">
+                    <div class="line"></div>
+                    <div class="dot"></div>
+                    <div class="line"></div>
+                </div>
+                <div class="duration">{{ "%.1f"|format(route.duration_hours if route else 7.5) }}h</div>
+                <div class="dot-line">
+                    <div class="line"></div>
+                    <div class="dot"></div>
+                    <div class="line"></div>
+                </div>
+                <div class="arrival">{{ schedule.arrival_time.strftime('%H:%M') }}</div>
+            </div>
+
+            <div class="bus-seats">
+                <div class="seats-available">{{ schedule.available_seats }}</div>
+                <div class="seats-label">Seats Available</div>
+            </div>
+
+            <div class="bus-price">
+                <div class="price-amount">₹{{ schedule.price|int }}</div>
+                <div class="price-label">per seat</div>
+                <a href="{{ url_for('select_seats', schedule_id=schedule.id) }}" class="btn btn-primary btn-sm" style="margin-top: 8px;">
+                    Select Seats
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-results">
+            <i class="fas fa-bus-slash"></i>
+            <h3>No Buses Found</h3>
+            <p>No buses available for this route on the selected date. Please try a different date.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top: 15px;">
+                <i class="fas fa-arrow-left"></i> Back to Search
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel - Ritesh Tours and Travels{% endblock %}
+
+{% block content %}
+<!-- Admin Header -->
+<div class="admin-header">
+    <div class="container">
+        <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
+        <p style="opacity: 0.8;">Ritesh Tours and Travels - Management Panel</p>
+
+        <div class="admin-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_bookings }}</div>
+                <div class="stat-label">Total Bookings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ active_bookings }}</div>
+                <div class="stat-label">Active Bookings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">₹{{ total_revenue|int }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ buses|length }}</div>
+                <div class="stat-label">Fleet Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ paid_bookings }}</div>
+                <div class="stat-label">Paid Bookings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ users|length }}</div>
+                <div class="stat-label">Registered Users</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="padding-bottom: 60px;">
+    <div class="admin-grid">
+        <!-- Add Bus -->
+        <div class="admin-card">
+            <h3><i class="fas fa-bus" style="color: var(--primary);"></i> Add New Bus</h3>
+            <form action="{{ url_for('admin_add_bus') }}" method="POST">
+                <div class="form-group">
+                    <label>Bus Name</label>
+                    <input type="text" name="bus_name" required placeholder="e.g., Ritesh Premium">
+                </div>
+                <div class="form-group">
+                    <label>Bus Type</label>
+                    <select name="bus_type" required>
+                        <option value="AC Seater">AC Seater</option>
+                        <option value="Non-AC Seater">Non-AC Seater</option>
+                        <option value="AC Sleeper">AC Sleeper</option>
+                        <option value="Semi-Sleeper">Semi-Sleeper</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bus Number</label>
+                    <input type="text" name="bus_number" required placeholder="MH-09-RS-XXXX">
+                </div>
+                <div class="form-group">
+                    <label>Total Seats</label>
+                    <input type="number" name="total_seats" required min="1" max="60" value="40">
+                </div>
+                <div class="form-group">
+                    <label>Operator</label>
+                    <input type="text" name="operator" value="Ritesh Tours and Travels">
+                </div>
+                <div class="form-group">
+                    <label>Amenities</label>
+                    <input type="text" name="amenities" placeholder="AC, WiFi, Charging Point...">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Bus
+                </button>
+            </form>
+        </div>
+
+        <!-- Add Schedule -->
+        <div class="admin-card">
+            <h3><i class="fas fa-calendar-plus" style="color: var(--primary);"></i> Add New Schedule</h3>
+            <form action="{{ url_for('admin_add_schedule') }}" method="POST">
+                <div class="form-group">
+                    <label>Select Bus</label>
+                    <select name="bus_id" required>
+                        {% for bus in buses %}
+                        <option value="{{ bus.id }}">{{ bus.bus_name }} ({{ bus.bus_number }}) - {{ bus.bus_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Travel Date</label>
+                    <input type="date" name="travel_date" required id="scheduleDate">
+                </div>
+                <div class="form-group">
+                    <label>Departure Time</label>
+                    <input type="time" name="departure_time" required value="21:30">
+                </div>
+                <div class="form-group">
+                    <label>Price per Seat (₹)</label>
+                    <input type="number" name="price" required min="100" value="750">
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add Schedule
+                </button>
+            </form>
+
+            <h3 style="margin-top: 30px;"><i class="fas fa-calendar" style="color: var(--info);"></i> Upcoming Schedules</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Bus</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Price</th>
+                            <th>Seats</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sched in schedules %}
+                        <tr>
+                            <td>{{ sched.bus.bus_name[:15] }}</td>
+                            <td>{{ sched.travel_date.strftime('%d %b') }}</td>
+                            <td>{{ sched.departure_time.strftime('%H:%M') }}</td>
+                            <td>₹{{ sched.price|int }}</td>
+                            <td>{{ sched.available_seats }}/{{ sched.bus.total_seats }}</td>
+                            <td>
+                                {% if sched.status == 'active' %}
+                                <a href="{{ url_for('admin_cancel_schedule', schedule_id=sched.id) }}" 
+                                   class="btn btn-danger btn-sm"
+                                   onclick="return confirm('Cancel this schedule?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                                {% else %}
+                                <span style="color: var(--danger);">Cancelled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Fleet List -->
+        <div class="admin-card">
+            <h3><i class="fas fa-bus-alt" style="color: var(--primary);"></i> Fleet</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Bus Name</th>
+                            <th>Type</th>
+                            <th>Number</th>
+                            <th>Seats</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bus in buses %}
+                        <tr>
+                            <td>{{ bus.bus_name }}</td>
+                            <td>
+                                <span class="bus-type-badge 
+                                    {% if 'AC' in bus.bus_type and 'Sleeper' not in bus.bus_type %}badge-ac
+                                    {% elif 'Non-AC' in bus.bus_type %}badge-nonac
+                                    {% elif 'Sleeper' in bus.bus_type and 'Semi' not in bus.bus_type %}badge-sleeper
+                                    {% else %}badge-semi{% endif %}">
+                                    {{ bus.bus_type }}
+                                </span>
+                            </td>
+                            <td>{{ bus.bus_number }}</td>
+                            <td>{{ bus.total_seats }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_delete_bus', bus_id=bus.id) }}" 
+                                   class="btn btn-danger btn-sm"
+                                   onclick="return confirm('Delete this bus?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Bookings -->
+        <div class="admin-card">
+            <h3><i class="fas fa-ticket-alt" style="color: var(--primary);"></i> Recent Bookings</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Passenger</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr>
+                            <td><strong>{{ booking.booking_id }}</strong></td>
+                            <td>{{ booking.passenger_name[:15] }}</td>
+                            <td>₹{{ booking.total_amount|int }}</td>
+                            <td>
+                                <span class="payment-badge {{ booking.payment_status }}">
+                                    {{ booking.payment_method|upper }} - {{ booking.payment_status|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="booking-status status-{{ booking.status }}">
+                                    {{ booking.status|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if booking.payment_status == 'pending' and booking.status == 'confirmed' %}
+                                <form action="{{ url_for('admin_update_payment', booking_id=booking.booking_id) }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="payment_status" value="paid">
+                                    <button class="btn btn-success btn-sm" title="Mark as Paid">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not bookings %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                No bookings yet
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Registered Users -->
+        <div class="admin-card" style="grid-column: 1 / -1;">
+            <h3><i class="fas fa-users" style="color: var(--primary);"></i> Registered Users</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.phone }}</td>
+                            <td>
+                                {% if user.is_admin %}
+                                <span class="booking-status" style="background: #e3f2fd; color: #1565c0;">ADMIN</span>
+                                {% else %}
+                                <span class="booking-status" style="background: #d4edda; color: #155724;">USER</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at.strftime('%d %b %Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('scheduleDate').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Admin Login - Ritesh Tours and Travels{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card admin-auth-card">
+        <div class="auth-header">
+            <div class="auth-icon admin-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2>Admin Access</h2>
+            <p>Enter the admin password to continue</p>
+        </div>
+
+        <form action="{{ url_for('admin_login') }}" method="POST">
+            <div class="form-group">
+                <label><i class="fas fa-key"></i> Admin Password</label>
+                <input type="password" name="password" required placeholder="Enter admin password" autofocus>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-sign-in-alt"></i> Access Admin Panel
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <a href="{{ url_for('index') }}"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

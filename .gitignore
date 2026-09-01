@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.instance/
+*.db
+.freebuff/
+*.log
+*.log.err
+node_modules/
+.vercel/
